@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Try-On | AI-Powered Fashion</title>
+    <meta name="description"
+        content="Try on clothes, accessories, and more with AI. Upload your photo and see how any outfit looks on you instantly.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(139, 92, 246, 0.5);
+            --text-primary: #f0f0f5;
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --accent2: #06b6d4;
+            --accent3: #f43f5e;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Orbs */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        .orb:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            background: var(--accent);
+            top: -200px;
+            left: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            background: var(--accent2);
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -7s;
+        }
+
+        .orb:nth-child(3) {
+            width: 400px;
+            height: 400px;
+            background: var(--accent3);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -14s;
+        }
+
+        @keyframes orbFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(50px, -80px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-30px, 60px) scale(0.9);
+            }
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.25rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .swap-counter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .swap-counter .count {
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .swap-counter.warning .count {
+            color: var(--warning);
+        }
+
+        .swap-counter.danger .count {
+            color: var(--danger);
+        }
+
+        /* Main Container */
+        .main {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Step Indicator */
+        .steps-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 48px;
+        }
+
+        .step-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            color: var(--text-muted);
+            transition: var(--transition);
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-dot.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .step-dot.completed {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+
+        .step-line {
+            width: 60px;
+            height: 2px;
+            background: var(--border);
+            transition: var(--transition);
+        }
+
+        .step-line.completed {
+            background: var(--success);
+        }
+
+        /* Cards / Panels */
+        .step-panel {
+            display: none;
+            animation: panelIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .step-panel.active {
+            display: block;
+        }
+
+        @keyframes panelIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 28px;
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .upload-zone.dragover {
+            transform: scale(1.02);
+        }
+
+        .upload-zone.has-image {
+            padding: 12px;
+            border-style: solid;
+            border-color: var(--success);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .upload-text strong {
+            color: var(--accent);
+        }
+
+        .upload-hint {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-preview {
+            max-height: 320px;
+            max-width: 100%;
+            border-radius: var(--radius-xs);
+            object-fit: contain;
+            display: none;
+        }
+
+        .upload-zone.has-image .upload-preview {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .upload-zone.has-image .upload-icon,
+        .upload-zone.has-image .upload-text,
+        .upload-zone.has-image .upload-hint {
+            display: none;
+        }
+
+        .change-btn {
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: none;
+        }
+
+        .upload-zone.has-image~.change-btn {
+            display: inline-block;
+        }
+
+        .change-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Object Class Grid */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .class-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xs);
+            padding: 14px 10px;
+            text-align: center;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-secondary);
+            text-transform: capitalize;
+        }
+
+        .class-item:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(139, 92, 246, 0.3);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+        }
+
+        .class-item.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: var(--accent);
+            color: var(--accent);
+            box-shadow: 0 0 16px rgba(139, 92, 246, 0.15);
+        }
+
+        .class-item .class-emoji {
+            font-size: 1.3rem;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 32px;
+            border-radius: 100px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            color: #fff;
+            box-shadow: 0 4px 24px var(--accent-glow);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25d366, #128c7e);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+            text-decoration: none;
+        }
+
+        .btn-whatsapp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(37, 211, 102, 0.4);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--success), #16a34a);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(34, 197, 94, 0.4);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        /* Processing Screen */
+        .processing {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner-ring {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 28px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .processing-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .processing-sub {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .processing-status {
+            margin-top: 20px;
+            font-size: 0.82rem;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        /* Result */
+        .result-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Limit Reached */
+        .limit-reached {
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .limit-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+
+        .limit-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .limit-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 28px;
+            line-height: 1.6;
+        }
+
+        /* Error */
+        .error-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: var(--radius-sm);
+            padding: 16px 20px;
+            color: #fca5a5;
+            font-size: 0.88rem;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-box.visible {
+            display: block;
+            animation: panelIn 0.3s ease;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(20, 20, 30, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 12px 24px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+            opacity: 0;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .main {
+                padding: 24px 14px 60px;
+            }
+
+            .card {
+                padding: 24px 18px;
+            }
+
+            .card-title {
+                font-size: 1.25rem;
+            }
+
+            .class-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .class-item {
+                padding: 10px 6px;
+                font-size: 0.75rem;
+            }
+
+            .btn {
+                padding: 12px 24px;
+                font-size: 0.88rem;
+            }
+
+            .header {
+                padding: 12px 16px;
+            }
+
+            .logo {
+                font-size: 1.05rem;
+            }
+
+            .swap-counter {
+                font-size: 0.78rem;
+                padding: 6px 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-orbs">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">👗</div>
+            <span>TryOn AI</span>
+        </div>
+        <div class="swap-counter" id="swapCounter">
+            <span>Swaps left:</span>
+            <span class="count" id="swapCount">10</span>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main">
+        <!-- Step Indicator -->
+        <div class="steps-indicator" id="stepsIndicator">
+            <div class="step-dot active" data-step="1">1</div>
+            <div class="step-line"></div>
+            <div class="step-dot" data-step="2">2</div>
+            <div class="step-line"></div>
+            <div class="step-dot" data-step="3">3</div>
+            <div class="step-line"></div>
+            <div class="step-dot" data-step="4">4</div>
+        </div>
+
+        <!-- Step 1: Upload Person Image -->
+        <div class="step-panel active" id="step1">
+            <div class="card">
+                <h1 class="card-title">Upload Your Photo</h1>
+                <p class="card-subtitle">Upload a clear, full-body photo for the best results</p>
+                <div class="upload-zone" id="personUpload">
+                    <div class="upload-icon">📸</div>
+                    <p class="upload-text">Drag & drop or <strong>browse</strong></p>
+                    <p class="upload-hint">JPG, PNG — max 10 MB</p>
+                    <input type="file" accept="image/*" id="personFileInput">
+                    <img class="upload-preview" id="personPreview" alt="Person preview">
+                </div>
+                <button class="change-btn" id="personChangeBtn">Change photo</button>
+                <div class="btn-row">
+                    <button class="btn btn-primary" id="step1Next" disabled>Continue →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Upload Clothing Image -->
+        <div class="step-panel" id="step2">
+            <div class="card">
+                <h1 class="card-title">Upload Clothing / Accessory</h1>
+                <p class="card-subtitle">Upload an image of the item you want to try on</p>
+                <div class="upload-zone" id="clothingUpload">
+                    <div class="upload-icon">👕</div>
+                    <p class="upload-text">Drag & drop or <strong>browse</strong></p>
+                    <p class="upload-hint">JPG, PNG — max 10 MB</p>
+                    <input type="file" accept="image/*" id="clothingFileInput">
+                    <img class="upload-preview" id="clothingPreview" alt="Clothing preview">
+                </div>
+                <button class="change-btn" id="clothingChangeBtn">Change image</button>
+                <div class="btn-row">
+                    <button class="btn btn-secondary" id="step2Back">← Back</button>
+                    <button class="btn btn-primary" id="step2Next" disabled>Continue →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Select Object Class -->
+        <div class="step-panel" id="step3">
+            <div class="card">
+                <h1 class="card-title">What type of item is it?</h1>
+                <p class="card-subtitle">Select the category that matches your uploaded item</p>
+                <div class="class-grid" id="classGrid"></div>
+                <div class="btn-row">
+                    <button class="btn btn-secondary" id="step3Back">← Back</button>
+                    <button class="btn btn-primary" id="step3Next" disabled>✨ Generate Try-On</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Processing / Result -->
+        <div class="step-panel" id="step4">
+            <!-- Processing -->
+            <div class="card" id="processingCard">
+                <div class="processing">
+                    <div class="spinner-ring"></div>
+                    <p class="processing-title">Creating your look…</p>
+                    <p class="processing-sub">This may take a minute. The AI is working its magic.</p>
+                    <p class="processing-status" id="processingStatus">Connecting to AI…</p>
+                </div>
+            </div>
+            <!-- Result -->
+            <div class="card" id="resultCard" style="display:none;">
+                <h1 class="card-title">Your Try-On Result ✨</h1>
+                <p class="card-subtitle" style="margin-bottom:20px;">Here's how you look!</p>
+                <img class="result-image" id="resultImage" alt="Try-on result">
+                <div class="result-actions">
+                    <a class="btn btn-download" id="downloadBtn" download="tryon-result.png">⬇ Download</a>
+                    <button class="btn btn-secondary" id="tryAgainBtn">🔄 Try Another</button>
+                </div>
+            </div>
+            <!-- Error -->
+            <div class="error-box" id="errorBox"></div>
+        </div>
+
+        <!-- Limit Reached Overlay -->
+        <div class="step-panel" id="limitPanel">
+            <div class="card">
+                <div class="limit-reached">
+                    <div class="limit-icon">🚫</div>
+                    <p class="limit-title">Swap Limit Reached</p>
+                    <p class="limit-text">You've used all 10 free try-on swaps.<br>Contact us on WhatsApp for more swaps
+                        or premium access!</p>
+                    <a href="https://wa.me/919654361229?text=Hi!%20I%20need%20more%20virtual%20try-on%20swaps.%20Please%20help!"
+                        target="_blank" rel="noopener" class="btn btn-whatsapp">
+                        💬 Contact on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Gradio Client -->
+    <script type="module">
+        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client/dist/index.min.js";
+
+        // ─── State ───
+        const MAX_SWAPS = 10;
+        let personBlob = null;
+        let clothingBlob = null;
+        let selectedClass = null;
+        let currentStep = 1;
+
+        const objectClasses = [
+            { name: "top clothes", emoji: "👕" },
+            { name: "bottom clothes", emoji: "👖" },
+            { name: "dress", emoji: "👗" },
+            { name: "shoe", emoji: "👟" },
+            { name: "earrings", emoji: "💎" },
+            { name: "bracelet", emoji: "📿" },
+            { name: "necklace", emoji: "📿" },
+            { name: "ring", emoji: "💍" },
+            { name: "sunglasses", emoji: "🕶️" },
+            { name: "glasses", emoji: "👓" },
+            { name: "belt", emoji: "🪢" },
+            { name: "bag", emoji: "👜" },
+            { name: "hat", emoji: "🎩" },
+            { name: "tie", emoji: "👔" },
+            { name: "bow tie", emoji: "🎀" },
+        ];
+
+        // ─── Swap Counter ───
+        function getSwapsUsed() {
+            return parseInt(localStorage.getItem("tryonSwapsUsed") || "0", 10);
+        }
+        function setSwapsUsed(n) {
+            localStorage.setItem("tryonSwapsUsed", String(n));
+        }
+        function getSwapsLeft() {
+            return Math.max(0, MAX_SWAPS - getSwapsUsed());
+        }
+        function updateSwapUI() {
+            const left = getSwapsLeft();
+            const el = document.getElementById("swapCount");
+            const wrap = document.getElementById("swapCounter");
+            el.textContent = left;
+            wrap.classList.toggle("warning", left <= 5 && left > 2);
+            wrap.classList.toggle("danger", left <= 2);
+        }
+        function consumeSwap() {
+            setSwapsUsed(getSwapsUsed() + 1);
+            updateSwapUI();
+        }
+
+        // ─── Toast ───
+        function showToast(msg, duration = 3000) {
+            const t = document.getElementById("toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => t.classList.remove("show"), duration);
+        }
+
+        // ─── Steps Navigation ───
+        function goToStep(step) {
+            // Check swap limit
+            if (step === 1 && getSwapsLeft() <= 0) {
+                showLimitPanel();
+                return;
+            }
+            currentStep = step;
+            document.querySelectorAll(".step-panel").forEach(p => p.classList.remove("active"));
+            const panel = document.getElementById("step" + step);
+            if (panel) {
+                panel.classList.remove("active");
+                // Re-trigger animation
+                void panel.offsetWidth;
+                panel.classList.add("active");
+            }
+            // Update dots
+            document.querySelectorAll(".step-dot").forEach((d, i) => {
+                const s = i + 1;
+                d.classList.toggle("active", s === step);
+                d.classList.toggle("completed", s < step);
+            });
+            document.querySelectorAll(".step-line").forEach((l, i) => {
+                l.classList.toggle("completed", i + 1 < step);
+            });
+        }
+
+        function showLimitPanel() {
+            document.querySelectorAll(".step-panel").forEach(p => p.classList.remove("active"));
+            const lp = document.getElementById("limitPanel");
+            lp.classList.remove("active");
+            void lp.offsetWidth;
+            lp.classList.add("active");
+        }
+
+        // ─── Upload Helpers ───
+        function setupUpload(zoneId, inputId, previewId, changeBtnId, onReady) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            const preview = document.getElementById(previewId);
+            const changeBtn = document.getElementById(changeBtnId);
+
+            function handleFile(file) {
+                if (!file || !file.type.startsWith("image/")) {
+                    showToast("Please upload an image file");
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast("File too large (max 10 MB)");
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    zone.classList.add("has-image");
+                    onReady(file);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("dragover"); });
+            zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+            zone.addEventListener("drop", e => {
+                e.preventDefault(); zone.classList.remove("dragover");
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+            input.addEventListener("change", () => { if (input.files.length) handleFile(input.files[0]); });
+            changeBtn.addEventListener("click", () => {
+                input.value = "";
+                zone.classList.remove("has-image");
+                preview.src = "";
+                onReady(null);
+                input.click();
+            });
+        }
+
+        // ─── Build Class Grid ───
+        function buildClassGrid() {
+            const grid = document.getElementById("classGrid");
+            objectClasses.forEach(cls => {
+                const item = document.createElement("div");
+                item.className = "class-item";
+                item.innerHTML = `<span class="class-emoji">${cls.emoji}</span>${cls.name}`;
+                item.addEventListener("click", () => {
+                    document.querySelectorAll(".class-item").forEach(i => i.classList.remove("selected"));
+                    item.classList.add("selected");
+                    selectedClass = cls.name;
+                    document.getElementById("step3Next").disabled = false;
+                });
+                grid.appendChild(item);
+            });
+        }
+
+        // ─── API Integration ───
+        async function generateTryOn() {
+            const statusEl = document.getElementById("processingStatus");
+            const processingCard = document.getElementById("processingCard");
+            const resultCard = document.getElementById("resultCard");
+            const errorBox = document.getElementById("errorBox");
+
+            processingCard.style.display = "";
+            resultCard.style.display = "none";
+            errorBox.classList.remove("visible");
+
+            try {
+                // Step A: Remove background from clothing
+                statusEl.textContent = "Removing clothing background…";
+                const bgClient = await Client.connect("not-lain/background-removal");
+                const bgResult = await bgClient.predict("/image", { image: clothingBlob });
+
+                // bgResult.data[0] should be an object with a url property
+                let cleanClothingBlob;
+                if (bgResult.data && bgResult.data[0]) {
+                    let imgUrl;
+                    if (typeof bgResult.data[0] === "string") {
+                        imgUrl = bgResult.data[0];
+                    } else if (bgResult.data[0].url) {
+                        imgUrl = bgResult.data[0].url;
+                    } else if (bgResult.data[0].path) {
+                        imgUrl = bgResult.data[0].path;
+                    }
+                    if (imgUrl) {
+                        const resp = await fetch(imgUrl);
+                        cleanClothingBlob = await resp.blob();
+                    } else {
+                        cleanClothingBlob = clothingBlob;
+                    }
+                } else {
+                    cleanClothingBlob = clothingBlob;
+                }
+
+                // Step B: Virtual Try-On
+                statusEl.textContent = "Generating your try-on look…";
+                const tryonClient = await Client.connect("pbgo/OmniTry");
+                const tryonResult = await tryonClient.predict("/generate", {
+                    person_image: personBlob,
+                    object_image: cleanClothingBlob,
+                    object_class: selectedClass,
+                    steps: 30,
+                    guidance_scale: 2,
+                    seed: Math.floor(Math.random() * 999999),
+                });
+
+                // Extract result URL
+                let resultUrl;
+                if (tryonResult.data && tryonResult.data[0]) {
+                    if (typeof tryonResult.data[0] === "string") {
+                        resultUrl = tryonResult.data[0];
+                    } else if (tryonResult.data[0].url) {
+                        resultUrl = tryonResult.data[0].url;
+                    } else if (tryonResult.data[0].path) {
+                        resultUrl = tryonResult.data[0].path;
+                    }
+                }
+
+                if (!resultUrl) throw new Error("No result image returned from the API.");
+
+                // Show result
+                processingCard.style.display = "none";
+                resultCard.style.display = "";
+                document.getElementById("resultImage").src = resultUrl;
+                document.getElementById("downloadBtn").href = resultUrl;
+
+                consumeSwap();
+                showToast("Try-on complete! 🎉");
+            } catch (err) {
+                console.error(err);
+                processingCard.style.display = "none";
+                errorBox.textContent = "⚠ Something went wrong: " + (err.message || "Unknown error. Please try again.");
+                errorBox.classList.add("visible");
+            }
+        }
+
+        // ─── Init ───
+        function init() {
+            updateSwapUI();
+            buildClassGrid();
+
+            // Check limit on load
+            if (getSwapsLeft() <= 0) {
+                showLimitPanel();
+                return;
+            }
+
+            // Step 1: Person upload
+            setupUpload("personUpload", "personFileInput", "personPreview", "personChangeBtn", file => {
+                if (file) {
+                    personBlob = file;
+                    document.getElementById("step1Next").disabled = false;
+                } else {
+                    personBlob = null;
+                    document.getElementById("step1Next").disabled = true;
+                }
+            });
+            document.getElementById("step1Next").addEventListener("click", () => goToStep(2));
+
+            // Step 2: Clothing upload
+            setupUpload("clothingUpload", "clothingFileInput", "clothingPreview", "clothingChangeBtn", file => {
+                if (file) {
+                    clothingBlob = file;
+                    document.getElementById("step2Next").disabled = false;
+                } else {
+                    clothingBlob = null;
+                    document.getElementById("step2Next").disabled = true;
+                }
+            });
+            document.getElementById("step2Back").addEventListener("click", () => goToStep(1));
+            document.getElementById("step2Next").addEventListener("click", () => goToStep(3));
+
+            // Step 3: Class selection
+            document.getElementById("step3Back").addEventListener("click", () => goToStep(2));
+            document.getElementById("step3Next").addEventListener("click", () => {
+                if (getSwapsLeft() <= 0) {
+                    showLimitPanel();
+                    return;
+                }
+                goToStep(4);
+                generateTryOn();
+            });
+
+            // Try again button
+            document.getElementById("tryAgainBtn").addEventListener("click", () => {
+                // Reset state
+                personBlob = null;
+                clothingBlob = null;
+                selectedClass = null;
+                document.getElementById("personUpload").classList.remove("has-image");
+                document.getElementById("personPreview").src = "";
+                document.getElementById("personFileInput").value = "";
+                document.getElementById("step1Next").disabled = true;
+                document.getElementById("clothingUpload").classList.remove("has-image");
+                document.getElementById("clothingPreview").src = "";
+                document.getElementById("clothingFileInput").value = "";
+                document.getElementById("step2Next").disabled = true;
+                document.querySelectorAll(".class-item").forEach(i => i.classList.remove("selected"));
+                document.getElementById("step3Next").disabled = true;
+                document.getElementById("processingCard").style.display = "";
+                document.getElementById("resultCard").style.display = "none";
+                document.getElementById("errorBox").classList.remove("visible");
+
+                if (getSwapsLeft() <= 0) {
+                    showLimitPanel();
+                } else {
+                    goToStep(1);
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
